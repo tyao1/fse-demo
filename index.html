@@ -1,0 +1,127 @@
+<html>
+  <head>
+    <title>FSE demo</title>
+    <style>
+      body, input, button {
+        font-size: 34px;
+      }
+    </style>
+  </head>
+  <body>
+    <div id="container">
+
+    </div>
+
+    <script src="./simple-redux.js"></script>
+    <script src="./render.js"></script>
+    <script>
+
+      // application state
+      const initialState = {
+        color: "#fff",
+        count: 0,
+        messages: []
+      }
+
+      function calcColor(count) {
+        return `rgb(${count * 30 % 255},${100 + count * 50 % 255},${-30 + count * 10 % 255} )`;
+      }
+      // the reducer
+      function reducer(state, action) {
+        switch(action.type) {
+          case 'countAdd':
+            return {
+              ...state,
+              count: state.count + 1,
+              color: calcColor(state.count)
+            };
+            case 'countMinus':
+              return {
+                ...state,
+                count: state.count - 1,
+                color: calcColor(state.count)
+              };
+          case 'message':
+            return {
+              ...state,
+              messages: [
+                ...state.messages,
+                action.data
+              ]
+            };
+          default:
+            return state;
+        }
+      }
+
+      // initialize simple redux
+      let store = createStore(reducer, initialState);
+
+      /*
+        Bonus Middleware
+      */
+        store = enhancer(store, [
+          ({dispatch, getState}) => (next) => action => {
+            console.log(action);
+            next(action);
+          },
+          // Thunk
+          ({dispatch, getState}) => (next) => action => {
+            if (typeof action === 'function') {
+              action(dispatch, getState);
+            } else {
+              next(action);
+            }
+          }
+        ]);
+
+      // listening for state changes
+      store.listen(() => {
+        const state = store.getState();
+        render(state);
+      });
+
+      // initial render
+      render(initialState);
+
+      /*
+        Bind events
+      */
+      var elem = document.getElementById("container");
+
+      elem.addEventListener('click', (event) => {
+        switch (event.target.id) {
+          case 'plus':
+            store.dispatch({
+              type: 'countAdd'
+            });
+            break;
+          case 'minus':
+            store.dispatch({
+              type: 'countMinus'
+            });
+            // Middleware
+            store.dispatch(function(dispatch) {
+              setTimeout(() => {
+                dispatch({
+                  type: 'message',
+                  data: 'Minus Clicked',
+                });
+              }, 1000);
+            })
+            break;
+          case 'send':
+            store.dispatch({
+              type: 'message',
+              data: document.getElementById("input").value,
+            });
+            break;
+          default:
+            break;
+        }
+      });
+
+    </script>
+  </body>
+
+</html>
